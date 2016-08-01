@@ -64,7 +64,7 @@ MainWin::MainWin(QWidget *parent)
     initConnectionsTreeView();
     initContextMenus();
     initFormButtons();    
-    initUpdater();
+    // initUpdater();
 }
 
 void MainWin::initConnectionsTreeView()
