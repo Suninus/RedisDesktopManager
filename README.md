@@ -3,11 +3,16 @@ How to build on OS X:
 git clone --recursive https://github.com/palmtoy/RedisDesktopManager.git -b pt_0.8.0 rdm && cd ./rdm
 
 1) Install XCode with xcode build tools
+
 2) Build RDM dependencies: `cd ./src && ./configure`
+
 3) Install crashreporter: `mkdir -p ./bin/osx/release/ && cp ./crashreporter ./bin/osx/release/`
-4) Install Qt 5.7
+
+4) Install [Qt 5.7](http://www.qt.io/download-open-source/#section-2)
+
 5) Open `./src/rdm.pro` in Qt Creator
-6) Select `Release` and run build
+
+6) Select `Release` and run `Build`
 
 ======================================================================================
 
