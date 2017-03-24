@@ -8,7 +8,7 @@ git clone --recursive https://github.com/palmtoy/RedisDesktopManager.git -b pt_0
 
 3) Install crashreporter: `cd .. && mkdir -p ./bin/osx/release/ && cp ./crashreporter ./bin/osx/release/`
 
-4) Install [Qt 5.7](http://www.qt.io/download-open-source/#section-2)
+4) Install [Qt 5.7](https://www.qt.io/download-open-source/?hsCtaTracking=f977210e-de67-475f-a32b-65cec207fd03%7Cd62710cd-e1db-46aa-8d4d-2f1c1ffdacea&__hstc=152220518.7354ec057782982b1fdc9f518a6e97c3.1490251704982.1490251704982.1490321606981.2&__hssc=152220518.4.1490321606981)
 
 5) Open `./src/rdm.pro` in Qt Creator
 
