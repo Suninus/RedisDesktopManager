@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.2
 import QtQuick.Layouts 1.1
 
 import "./formatters/formatters.js" as Formatters
@@ -42,8 +43,8 @@ ColumnLayout
         Layout.fillWidth: true
 
         Text { text: root.fieldLabel }
-        Text { id: binaryFlag; text: "[Binary]"; visible: false; color: "green"; }
-        Text { id: compressedFlag; text: "[GZIP compressed]"; visible: false; color: "red"; } // TBD
+        Text { id: binaryFlag; text: qsTr("[Binary]"); visible: false; color: "green"; }
+        Text { id: compressedFlag; text: qsTr("[GZIP compressed]"); visible: false; color: "red"; } // TBD
         Item { Layout.fillWidth: true }
         Text { text: "View as:" }
 
@@ -84,24 +85,25 @@ ColumnLayout
         }
 
         text: {
-            if (!formatter) return ''
-            var val
-            if (formatter.binary === true)
-                val = formatter.getFormatted(binaryUtils.valueToBinary(value))
-            else
-                val = formatter.getFormatted(binaryUtils.toUtf(value))
+            if (!formatter || !value)
+                return ''
 
-            if (val === undefined) {
-                formatterSelector.currentIndex = 0
-                binaryFlag.visible = false
+            if (formatter.binary === true) {
+                return formatter.getFormatted(binaryUtils.valueToBinary(value)) || ''
+            } else {
+                return formatter.getFormatted(binaryUtils.toUtf(value)) || ''
             }
-
-            return (val === undefined) ? '' : val
         }
 
         property var formatter: {
             var index = formatterSelector.currentIndex ? formatterSelector.currentIndex : Formatters.defaultFormatterIndex
             return Formatters.enabledFormatters[index]
         }
+
+        style: TextAreaStyle {
+            renderType: Text.QtRendering
+        }
+        font { family: monospacedFont.name; pointSize: 12 }
+        wrapMode: TextEdit.WrapAnywhere
     }
 }

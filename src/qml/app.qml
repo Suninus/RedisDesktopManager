@@ -11,7 +11,8 @@ import "./common"
 import "./value-editor"
 import "./connections-tree"
 import "./console"
-import "./code-editor"
+import "./server-info"
+import "./bulk-operations"
 
 ApplicationWindow {
     id: approot
@@ -19,7 +20,7 @@ ApplicationWindow {
     objectName: "rdm_qml_root"
     title: "Redis Desktop Manager " + Qt.application.version
     width: 1100
-    height: 700
+    height: 800
 
     property double wRatio : (width * 1.0) / (Screen.width * 1.0)
     property double hRatio : (height * 1.0) / (Screen.height * 1.0)
@@ -30,7 +31,7 @@ ApplicationWindow {
         if (hRatio > 1 || wRatio > 1) {
             console.log("Ratio > 1.0. Resize main window.")
             width = Screen.width * 0.9
-            height = Screen.heigh * 0.8
+            height = Screen.height * 0.8
         }
     }
 
@@ -44,6 +45,13 @@ ApplicationWindow {
 
     SystemPalette {
         id: sysPalette
+    }
+
+    FontLoader {
+        id: monospacedFont
+        Component.onCompleted: {
+            source = "qrc:/fonts/Inconsolata-Regular.ttf"
+        }
     }
 
     QuickStartDialog {
@@ -60,9 +68,9 @@ ApplicationWindow {
 
         onTestConnection: {
             if (connectionsManager.testConnectionSettings(settings)) {
-                notification.showMsg("Successful connection to redis-server")
+                notification.showMsg(qsTr("Successful connection to redis-server"))
             } else {
-                notification.showError("Can't connect to redis-server")
+                notification.showError(qsTr("Can't connect to redis-server"))
             }
         }
 
@@ -87,6 +95,19 @@ ApplicationWindow {
             icon = StandardIcon.Information
             text = msg
             open()
+        }
+    }
+
+    BulkOperationsDialog {
+        id: bulkOperationDialog
+    }
+
+    Connections {
+        target: bulkOperations
+
+        onOpenDialog: {
+            bulkOperationDialog.operationName = operationName
+            bulkOperationDialog.open()
         }
     }
 
@@ -118,6 +139,7 @@ ApplicationWindow {
             id: connectionsTree
             Layout.fillHeight: true
             Layout.minimumWidth: 350
+            Layout.minimumHeight: 500
         }
 
         BetterSplitView {
@@ -140,12 +162,30 @@ ApplicationWindow {
                 }
 
                 WelcomeTab {
+                    id: welcomeTab
                     clip: true
                     objectName: "rdm_qml_welcome_tab"
 
                     property bool not_mapped: true
 
                     onClose: tabs.removeTab(index)
+
+                    function closeIfOpened() {
+                        var welcomeTab = tabs.getTab(0)
+
+                        if (welcomeTab && welcomeTab.not_mapped)
+                            tabs.removeTab(0)
+                    }
+                }
+
+                ServerInfoTabs {
+                    model: serverStatsModel
+                }
+
+                Connections {
+                    target: serverStatsModel
+
+                    onRowsInserted: welcomeTab.closeIfOpened()
                 }
 
                 ValueTabs {
@@ -162,18 +202,12 @@ ApplicationWindow {
                     target: valuesModel
                     onKeyError: {
                         if (index != -1)
-                            tabs.currentIndex = index + 1
+                            tabs.currentIndex = index
 
                         notification.showError(error)
                     }
 
-                    onCloseWelcomeTab: {
-                        var welcomeTab = tabs.getTab(0)
-
-                        if (welcomeTab && welcomeTab.not_mapped)
-                            tabs.removeTab(0)
-                    }
-
+                    onRowsInserted: welcomeTab.closeIfOpened()
                     onNewKeyDialog: addNewKeyDialog.open()
                 }
             }
@@ -206,7 +240,7 @@ ApplicationWindow {
                     BaseConsole {
                         id: logTab
                         readOnly: true
-                        textColor: "darkgrey"
+                        textColor: "#6D6D6E"
 
                         Connections {
                             target: appLogger

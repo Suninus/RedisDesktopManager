@@ -14,8 +14,10 @@ class QmlUtils;
 class ConnectionsManager;
 class Updater;
 class LogHandler;
+class TabViewModel;
 namespace ValueEditor { class ViewModel; }
-namespace Console { class ViewModel; }
+namespace BulkOperations { class Manager; }
+
 
 class Application : public QApplication
 {
@@ -35,6 +37,7 @@ private:
     void initLog();
     void initConnectionsManager();
     void initUpdater();
+    void installTranslator();
 
 private slots:
       void OnNewUpdateAvailable(QString &url);
@@ -45,6 +48,8 @@ private:
     QSharedPointer<ConnectionsManager> m_connections;
     QSharedPointer<Updater> m_updater;
     QSharedPointer<ValueEditor::ViewModel> m_keyValues;
-    QSharedPointer<Console::ViewModel> m_consoleModel;
+    QSharedPointer<BulkOperations::Manager> m_bulkOperations;
+    QSharedPointer<TabViewModel> m_consoleModel;
+    QSharedPointer<TabViewModel> m_serverStatsModel;
     LogHandler* m_logger;
 };

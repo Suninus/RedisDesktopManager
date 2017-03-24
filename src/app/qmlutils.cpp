@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QDebug>
 #include <qredisclient/utils/text.h>
+#include <QtCharts/QDateTimeAxis>
+#include <QDateTime>
 
 bool QmlUtils::isBinaryString(const QVariant &value)
 {
@@ -11,6 +13,15 @@ bool QmlUtils::isBinaryString(const QVariant &value)
     }
     QByteArray val = value.toByteArray();
     return isBinary(val);
+}
+
+long QmlUtils::binaryStringLength(const QVariant &value)
+{
+    if (!value.canConvert(QVariant::ByteArray)) {
+        return -1;
+    }
+    QByteArray val = value.toByteArray();
+    return val.size();
 }
 
 QVariant QmlUtils::valueToBinary(const QVariant &value)
@@ -67,7 +78,7 @@ QVariant QmlUtils::toUtf(const QVariant &value)
 
 QString QmlUtils::getPathFromUrl(const QUrl &url)
 {
-    return url.path();
+    return url.isLocalFile() ? url.toLocalFile() : url.path();
 }
 
 void QmlUtils::copyToClipboard(const QString &text)
@@ -79,4 +90,39 @@ void QmlUtils::copyToClipboard(const QString &text)
 
     cb->clear();
     cb->setText(text);
+}
+
+QtCharts::QDateTimeAxis* findDateTimeAxis(QtCharts::QXYSeries *series)
+{
+    using namespace QtCharts;
+
+    QList<QAbstractAxis*> axes = series->attachedAxes();
+
+    QDateTimeAxis* ax = nullptr;
+
+    for (QAbstractAxis* axis : axes) {
+        if (axis->type() == QAbstractAxis::AxisTypeDateTime) {
+            ax = qobject_cast<QDateTimeAxis* >(axis);
+            return ax;
+        }
+    }
+
+    return ax;
+}
+
+void QmlUtils::addNewValueToDynamicChart(QtCharts::QXYSeries *series, double value)
+{    
+    using namespace QtCharts;
+
+    QDateTimeAxis* ax = findDateTimeAxis(series);
+
+    if (series->count() == 0 && ax) {
+        ax->setMin(QDateTime::currentDateTime());
+    }
+
+    series->append(QDateTime::currentDateTime().toMSecsSinceEpoch(), value);
+
+    if (series->attachedAxes().size() > 0 && ax) {
+        ax->setMax(QDateTime::currentDateTime());
+    }
 }

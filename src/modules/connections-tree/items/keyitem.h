@@ -8,8 +8,11 @@ namespace ConnectionsTree {
 class KeyItem : public TreeItem
 {
 public:
-    KeyItem(const QByteArray& fullPath, unsigned short int dbIndex,
-            QSharedPointer<Operations> operations, QWeakPointer<TreeItem> parent);
+    KeyItem(const QByteArray& fullPath,
+            unsigned short int dbIndex,
+            QSharedPointer<Operations> operations,
+            QWeakPointer<TreeItem> parent,
+            Model &model);
 
     QString getDisplayName() const override;
 
@@ -18,6 +21,8 @@ public:
     QString getIconUrl() const override;
 
     QString getType() const override { return "key"; }
+
+    int itemDepth() const override { return m_fullPath.count(m_operations->getNamespaceSeparator().toUtf8()) + 2; }
 
     QList<QSharedPointer<TreeItem>> getAllChilds() const override;
 

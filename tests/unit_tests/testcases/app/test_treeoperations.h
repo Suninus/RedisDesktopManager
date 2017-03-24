@@ -10,9 +10,12 @@ private slots:
     void testCreation();  
     
     void testGetDatabases();
-    void testGetDatabasesWithSelectScan();
+    void testGetDatabasesOnOldRedis();
     
     void testGetDatabaseKeys();
     void testGetDatabaseKeys_data();
+
+    void testFlushDb();
+    void testFlushDbCommandError();
 };
 

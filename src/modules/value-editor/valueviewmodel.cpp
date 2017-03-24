@@ -1,7 +1,6 @@
 #include "valueviewmodel.h"
 #include <QDebug>
-
-const int PAGE_SIZE = 100;
+#include <QSettings>
 
 ValueEditor::ValueViewModel::ValueViewModel(QSharedPointer<ValueEditor::Model> model)
     : QAbstractListModel((QObject*)model->getConnector().data()),
@@ -43,11 +42,6 @@ int ValueEditor::ValueViewModel::mapRowIndex(int i)
     return m_startFramePosition + i;
 }
 
-bool ValueEditor::ValueViewModel::isPartialLoadingSupported()
-{
-    return m_model->isPartialLoadingSupported();
-}
-
 QVariantList ValueEditor::ValueViewModel::getColumnNames()
 {
     QVariantList result;
@@ -68,7 +62,7 @@ bool ValueEditor::ValueViewModel::isMultiRow()
 void ValueEditor::ValueViewModel::reload()
 {
     m_model->clearRowCache();
-    loadRows(m_startFramePosition, m_model->rowsCount() < PAGE_SIZE ? m_model->rowsCount() : PAGE_SIZE);
+    loadRows(m_startFramePosition, m_model->rowsCount() < pageSize() ? m_model->rowsCount() : pageSize());
 }
 
 bool ValueEditor::ValueViewModel::isRowLoaded(int i)
@@ -87,7 +81,7 @@ void ValueEditor::ValueViewModel::loadRows(int start, int count)
         return;
     }
 
-    QString msg = QString("Cannot load key value: %1");
+    QString msg = QString(QObject::tr("Cannot load key value: %1"));
 
     try {
         // NOTE(u_glide): Do so for proper rendering of QML table
@@ -171,11 +165,16 @@ void ValueEditor::ValueViewModel::deleteRow(int i)
 
     try {
         m_model->removeRow(targetRow);
+
+        emit beginRemoveRows(QModelIndex(), targetRow, targetRow);
+        emit endRemoveRows();
+
+        if (targetRow < m_model->rowsCount())
+            emit dataChanged(index(targetRow, 0), index(m_model->rowsCount() - 1, 0));
+
     } catch(const Model::Exception& e) {
         emit error(QString(e.what()));
-    }
-
-    emit layoutChanged();
+    }    
 }
 
 int ValueEditor::ValueViewModel::totalRowCount()
@@ -185,7 +184,9 @@ int ValueEditor::ValueViewModel::totalRowCount()
 
 int ValueEditor::ValueViewModel::pageSize()
 {
-    return PAGE_SIZE;
+    QSettings settings;
+
+    return settings.value("app/valueEditorPageSize", 1000).toInt();
 }
 
 QVariantMap ValueEditor::ValueViewModel::getRow(int row)

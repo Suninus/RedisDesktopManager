@@ -10,11 +10,13 @@ PROJECT_ROOT = $$PWD/../..//
 SRC_DIR = $$PROJECT_ROOT/src//
 
 HEADERS += \
-    $$PROJECT_ROOT/3rdparty/qredisclient/tests/unit_tests/basetestcase.h \
+    $$PROJECT_ROOT/3rdparty/qredisclient/tests/unit_tests/basetestcase.h \    
     $$PROJECT_ROOT/3rdparty/qredisclient/tests/unit_tests/mocks/*.h \
+    $$PROJECT_ROOT/src/modules/common/*.h \
 
 SOURCES += \
     $$PROJECT_ROOT/3rdparty/qredisclient/tests/unit_tests/basetestcase.cpp \
+    $$PROJECT_ROOT/src/modules/common/*.cpp \
     $$PWD/main.cpp \
 
 
@@ -35,8 +37,11 @@ include($$PWD/testcases/connections-tree/connections-tree-tests.pri)
 include($$PWD/testcases/console/console-tests.pri)
 include($$PWD/testcases/value-editor/value-editor-tests.pri)
 #############
-LIBS += -lz
 include($$PROJECT_ROOT/3rdparty/3rdparty.pri)
+
+HEADERS += $$PROJECT_ROOT/3rdparty/qt_modeltest/*.h
+SOURCES += $$PROJECT_ROOT/3rdparty/qt_modeltest/*.cpp
+INCLUDEPATH += $$PROJECT_ROOT/3rdparty/qt_modeltest/
 
 release: DESTDIR = $$PROJECT_ROOT/bin/tests
 debug:   DESTDIR = $$PROJECT_ROOT/bin/tests

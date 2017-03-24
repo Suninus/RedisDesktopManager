@@ -18,9 +18,8 @@ void ValueEditor::ViewModel::openTab(QSharedPointer<RedisClient::Connection> con
         m_keyFactory->loadKey(connection, key.getFullPath(), key.getDbIndex(),
                             [this, inNewTab, &key](QSharedPointer<Model> keyModel, const QString& error)
         {
-            if (keyModel.isNull() || !error.isEmpty()) {
-                QString msg("<b>Cannot open value tab</b>:\n%1");
-                emit keyError(-1, msg.arg(error));
+            if (keyModel.isNull() || !error.isEmpty()) {               
+                emit keyError(-1, QString("<b>%1</b>:\n%2").arg(QObject::tr("Cannot open value tab")).arg(error));
                 return;
             }
 
@@ -37,20 +36,23 @@ void ValueEditor::ViewModel::openTab(QSharedPointer<RedisClient::Connection> con
         });
         // TODO: add empty key model for loading
     } catch (...) {
-        emit keyError(-1, "Connection error. Can't open value tab. ");
+        emit keyError(-1, QObject::tr("Connection error. Can't open value tab. "));
     }
 }
 
-void ValueEditor::ViewModel::closeDbKeys(QSharedPointer<RedisClient::Connection> connection, int dbIndex)
-{    
+void ValueEditor::ViewModel::closeDbKeys(QSharedPointer<RedisClient::Connection> connection, int dbIndex,
+                                         const QRegExp& filter)
+{
     for (int index = 0; 0 <= index && index < m_valueModels.size(); index++) {
         auto model = m_valueModels.at(index);
 
         if (model->getConnection() == connection && model->dbIndex() == dbIndex) {
-            beginRemoveRows(QModelIndex(), index, index);
-            m_valueModels.removeAt(index);
-            endRemoveRows();
-            index--;
+            if (model->getKeyName().contains(filter)) {
+                beginRemoveRows(QModelIndex(), index, index);
+                m_valueModels.removeAt(index);
+                endRemoveRows();
+                index--;
+            }
         }
     }
 }
@@ -59,6 +61,10 @@ QModelIndex ValueEditor::ViewModel::index(int row, int column, const QModelIndex
 {
     Q_UNUSED(column);
     Q_UNUSED(parent);
+
+    if (row < 0 || column < 0)
+        return QModelIndex();
+
     return createIndex(row, 0);
 }
 
@@ -101,22 +107,37 @@ QHash<int, QByteArray> ValueEditor::ViewModel::roleNames() const
     roles[keyType] = "keyType";    
     roles[showValueNavigation] = "showValueNavigation";
     roles[columnNames] = "columnNames";
-    roles[count] = "valuesCount";
-    roles[keyValue] = "keyValue";
+    roles[count] = "valuesCount";    
     return roles;
 }
 
 void ValueEditor::ViewModel::addKey(QString keyName, QString keyType,
                                     const QVariantMap &row, QJSValue jsCallback)
 {
+    if (m_newKeyRequest.first.isNull()) {
+        qDebug() << "Invalid new key request";
+        return;
+    }
+
+    auto connection = m_newKeyRequest.first.toStrongRef();
+
+    if (!connection) {
+        qDebug() << "Invalid new key request";
+        return;
+    }
+
     try {
-        m_keyFactory->addKey(m_newKeyRequest.first,
-                             keyName.toUtf8(), m_newKeyRequest.second,
-                             keyType, row);
+        m_keyFactory->addKey(connection, keyName.toUtf8(),
+                             m_newKeyRequest.second, keyType, row);
         m_newKeyCallback();
-        jsCallback.call(QJSValueList {});
-    } catch (const Model::Exception& e) {        
-        jsCallback.call(QJSValueList { "Can't add new key: " + QString(e.what()) });
+
+        if (jsCallback.isCallable())
+            jsCallback.call(QJSValueList {});
+
+        m_newKeyRequest = NewKeyRequest();
+    } catch (const Model::Exception& e) {
+        if (jsCallback.isCallable())
+            jsCallback.call(QJSValueList { QObject::tr("Can't add new key: ") + QString(e.what()) });
     }
 }
 
@@ -131,7 +152,7 @@ void ValueEditor::ViewModel::renameKey(int i, const QString& newKeyName)
         value->setKeyName(printableStringToBinary(newKeyName));
         emit dataChanged(index(i, 0), index(i, 0));
     } catch (const Model::Exception& e) {
-        emit keyError(i, "Can't rename key: " + QString(e.what()));
+        emit keyError(i, QObject::tr("Can't rename key: ") + QString(e.what()));
     }
 }
 
@@ -145,7 +166,7 @@ void ValueEditor::ViewModel::removeKey(int i)
     try {
         value->removeKey();
     } catch (const Model::Exception& e) {
-        emit keyError(i, "Can't remove key: " + QString(e.what()));
+        emit keyError(i, QObject::tr("Can't remove key: ") + QString(e.what()));
     }
 }
 
@@ -160,7 +181,7 @@ void ValueEditor::ViewModel::setTTL(int i, const QString& newTTL)
         value->setTTL(newTTL.toLong());
         emit dataChanged(index(i, 0), index(i, 0));
     } catch (const Model::Exception& e) {
-        emit keyError(i, "Can't set key ttl: " + QString(e.what()));
+        emit keyError(i, QObject::tr("Can't set key ttl: ") + QString(e.what()));
     }
 }
 
@@ -174,7 +195,7 @@ void ValueEditor::ViewModel::closeTab(int i)
         m_valueModels.removeAt(i);
         endRemoveRows();
     } catch (const Model::Exception& e) {
-        emit keyError(i, "Can't remove key: " + QString(e.what()));
+        emit keyError(i, QObject::tr("Can't close key tab: ") + QString(e.what()));
     }
 }
 
@@ -206,7 +227,7 @@ void ValueEditor::ViewModel::openNewKeyDialog(QSharedPointer<RedisClient::Connec
     if (connection.isNull() || dbIndex < 0)
         return;
 
-    m_newKeyRequest = qMakePair(connection, dbIndex);
+    m_newKeyRequest = qMakePair(connection.toWeakRef(), dbIndex);
     m_newKeyCallback = callback;
 
     QString dbId= QString("%1:db%2")
@@ -232,9 +253,9 @@ void ValueEditor::ViewModel::loadModel(QSharedPointer<ValueEditor::Model> model,
         endInsertRows();
     } else {
         m_valueModels.insert(m_currentTabIndex, model);
-        m_valueModels.removeAt(m_currentTabIndex+1);
-        emit replaceTab(m_currentTabIndex);
+        m_valueModels.removeAt(m_currentTabIndex+1);        
         emit dataChanged(index(m_currentTabIndex, 0), index(m_currentTabIndex, 0));
+        emit replaceTab(m_currentTabIndex);
     }
 }
 

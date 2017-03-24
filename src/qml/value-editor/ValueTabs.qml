@@ -7,6 +7,7 @@ import QtQuick.Window 2.2
 import MeasurementProtocol 1.0
 import "./editors/editor.js" as Editor
 import "./../common"
+import rdm.models 1.0
 
 Repeater {
 
@@ -37,9 +38,41 @@ Repeater {
         }
         property int tabIndex: keyIndex
         property var table
+        property var valueEditor
+        property var searchModel
+
+        property variant keyModel: keyName ? viewModel.getValue(tabIndex) : null
+
+        onKeyModelChanged: {
+            // On tab reload
+            if (keyModel && table) {
+                table.forceLoading = false
+                table.currentStart = 0
+                table.searchField.text = ""
+
+                if (valueEditor.item)
+                    valueEditor.item.resetAndDisableEditor()                
+
+                table.loadValue()
+            }
+        }
+
+        property Component searchModelComponent: Component {
+            SortFilterProxyModel {
+                source: keyTab.keyModel
+                sortOrder: table.sortIndicatorOrder
+                sortCaseSensitivity: Qt.CaseInsensitive
+                sortRole: keyTab.keyModel ? table.getColumn(table.sortIndicatorColumn).role : ""
+
+                filterString: "*" + table.searchField.text + "*"
+                filterSyntax: SortFilterProxyModel.Wildcard
+                filterCaseSensitivity: Qt.CaseInsensitive
+                filterRole: keyTab.keyModel ? table.getColumn(1).role : ""
+            }
+        }
 
         Keys.onPressed: {
-            if (!table)
+            if (!keyModel)
                 return
 
             var reloadKey = event.key == Qt.Key_F5
@@ -48,7 +81,7 @@ Repeater {
 
             if (reloadKey) {
                 console.log("Reload")
-                table.model.reload()
+                keyModel.reload()
             }
         }
 
@@ -90,9 +123,9 @@ Repeater {
                     }
 
                     Item { visible: showValueNavigation; Layout.preferredWidth: 5}
-                    Text { visible: showValueNavigation; text: "Size: "+ table.model.totalRowCount() }
+                    Text { visible: showValueNavigation; text: "Size: "+ valuesCount }
                     Item { Layout.preferredWidth: 5}
-                    Text { text: "TTL:"; font.bold: true }
+                    Text { text: qsTr("TTL:"); font.bold: true }
                     Text { text: keyTtl}
                     Item { Layout.preferredWidth: 5}
 
@@ -110,7 +143,7 @@ Repeater {
                                 implicitHeight: 100
                                 width: 500
 
-                                Text { text: "New name:" }
+                                Text { text: qsTr("New name:") }
                                 TextField {
                                     id: newKeyName;
                                     Layout.fillWidth: true;
@@ -139,13 +172,13 @@ Repeater {
                     }
 
                     Button {
-                        text: "Delete"
+                        text: qsTr("Delete")
                         iconSource: "qrc:/images/delete.svg"
 
                         MessageDialog {
                             id: deleteConfirmation
-                            title: "Delete key"
-                            text: "Do you really want to delete this key?"
+                            title: qsTr("Delete key")
+                            text: qsTr("Do you really want to delete this key?")
                             onYes: {
                                 console.log("remove key")
                                 viewModel.removeKey(keyTab.tabIndex)
@@ -164,16 +197,16 @@ Repeater {
                     }
 
                     Button {
-                        text: "Reload Value"
+                        text: qsTr("Reload Value")
                         action: reLoadAction
                         visible: !showValueNavigation
-                    }                    
+                    }
 
                     Button {
-                        text: "Set TTL"
+                        text: qsTr("Set TTL")
                         Dialog {
                             id: setTTLConfirmation
-                            title: "Set key TTL"
+                            title: qsTr("Set key TTL")
 
                             width: 520
 
@@ -182,7 +215,7 @@ Repeater {
                                 implicitHeight: 100
                                 width: 500
 
-                                Text { text: "New TTL:" }
+                                Text { text: qsTr("New TTL:") }
                                 TextField {
                                     id: newTTL;
                                     Layout.fillWidth: true;
@@ -237,20 +270,25 @@ Repeater {
 
                         TableView {
                             id: table
+
+                            property var searchField
+
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             Layout.minimumHeight: 100
 
+                            sortIndicatorVisible: true
+
                             TableViewColumn{ width: 50 }
                             TableViewColumn{ width: 150 }
-                            TableViewColumn{ width: table.width - 200}
+                            TableViewColumn{ width: table.width - 200}                            
 
-                            model: viewModel.getValue(tabIndex)
+                            model: searchModel ? searchModel : null
 
                             property int currentStart: 0
-                            property int maxItemsOnPage: model? model.pageSize() : 100
+                            property int maxItemsOnPage: keyTab.keyModel ? keyTab.keyModel.pageSize() : 100
                             property int currentPage: currentStart / maxItemsOnPage + 1
-                            property int totalPages: Math.ceil(table.model.totalRowCount() / maxItemsOnPage)
+                            property int totalPages: Math.ceil(keyTab.keyModel.totalRowCount() / maxItemsOnPage)
                             property bool forceLoading: false
 
                             Component.onCompleted: {
@@ -263,9 +301,11 @@ Repeater {
                                     anchors.fill: parent
                                     color: styleData.textColor
                                     elide: styleData.elideMode
-                                    text: {
-                                        if (!styleData.value)
+                                    text: {                                        
+
+                                        if (!styleData.value || keyType === "string") {
                                             return ""
+                                        }
 
                                         if (styleData.column === 2 && keyType == "zset") {
                                             return parseFloat(Number(styleData.value).toFixed(20))
@@ -279,26 +319,6 @@ Repeater {
                                 }
                             }
 
-                            Connections {
-                                target: viewModel
-
-                                onReplaceTab: {
-                                    console.log("replace tab")
-                                    table.model = viewModel.getValue(tabIndex)
-                                    table.forceLoading = false
-                                    table.currentStart = 0
-
-                                    if (valueEditor.item)
-                                        valueEditor.item.resetAndDisableEditor()
-
-                                    table.loadValue()
-
-                                    if (keyType === "string") {
-                                        valueEditor.loadRowValue(0)
-                                    }
-                                }
-                            }
-
                             MessageDialog {
                                 id: valueErrorNotification
                                 visible: false
@@ -308,7 +328,7 @@ Repeater {
                             }
 
                             Connections {
-                                target: table.model ? table.model : null
+                                id: keyModelConnections
 
                                 onError: {
                                     valueErrorNotification.text = error
@@ -316,23 +336,36 @@ Repeater {
                                 }
 
                                 onRowsLoaded: {
-                                    wrapper.hideLoader()
-                                }
-                            }
+                                    console.log("rows loaded")
 
-                            MessageDialog {
-                                id: valueLoadingConfirmation
-                                title: "Legacy Redis-Server detected!"
-                                text: "You are connected to legacy redis-server, which doesn't support partial loading. "
-                                      + "Do you really want to load " + table.model.totalRowCount() +" items?"
-                                onYes: {
-                                    table.forceLoading = true
-                                    table.loadValue()
+                                    wrapper.hideLoader()
+
+                                    keyTab.searchModel = keyTab.searchModelComponent.createObject(keyTab)
+
+                                    console.log(keyType)
+
+                                    if (keyType === "string") {
+                                        valueEditor.loadRowValue(0)
+                                    } else {
+                                        var columns = columnNames
+
+                                        for (var index = 0; index < 3; index++)
+                                        {
+                                            var column = table.getColumn(index)
+
+                                            if (index >= columns.length) {
+                                                column.visible = false
+                                                continue
+                                            }
+
+                                            column.role = columns[index]
+                                            column.title = columns[index]
+                                            //if (index > 0) column.width = table.width / (columns.length - 1) - 50
+                                            column.visible = true
+                                            column.resizeToContents()
+                                        }
+                                    }
                                 }
-                                visible: false
-                                modality: Qt.ApplicationModal
-                                icon: StandardIcon.Warning
-                                standardButtons: StandardButton.Yes | StandardButton.No
                             }
 
                             function goToPage(page) {
@@ -362,51 +395,31 @@ Repeater {
                             }
 
                             function loadValue() {
-                                var columns = table.model.getColumnNames()
-
-                                for (var index = 0; index < 3; index++)
-                                {
-                                    var column = table.getColumn(index)
-
-                                    if (index >= columns.length) {
-                                        column.visible = false
-                                        continue
-                                    }
-
-                                    column.role = columns[index]
-                                    column.title = columns[index]
-                                    if (index > 0) column.width = table.width / (columns.length - 1) - 50
-                                    column.visible = true
+                                console.log("Load value")
+                                if (!keyTab.keyModel) {
+                                    console.log("Model is not ready")
+                                    return
                                 }
 
-                                if (table.model.isPartialLoadingSupported()
-                                        || table.model.totalRowCount() < maxItemsOnPage
-                                        || table.forceLoading) {
-                                    if (keyType != "string")
-                                        wrapper.showLoader()
-                                    table.model.loadRows(currentStart, maxItemsOnPage)
-                                } else {
-                                    // Legacy redis without SCAN support
-                                    // Show warning message
-                                    // to get upprove from user
-                                    valueLoadingConfirmation.open()
-                                }
+                                keyModelConnections.target = keyTab.keyModel
+                                wrapper.showLoader()
+                                keyTab.keyModel.loadRows(currentStart, maxItemsOnPage)
                             }
 
-                            onRowCountChanged: {
-                                wrapper.hideLoader()
-                            }
+                            onRowCountChanged: wrapper.hideLoader()
+                            onActivated: valueEditor.loadRowValue(table.model.getOriginalRowIndex(row))
+                            onClicked: valueEditor.loadRowValue(table.model.getOriginalRowIndex(row))
                         }
 
                         ColumnLayout {
                             Layout.fillHeight: true
-                            Layout.preferredWidth: 150
-                            Layout.maximumWidth: 150
+                            Layout.preferredWidth: 200
+                            Layout.maximumWidth: 200
                             Layout.alignment: Qt.AlignTop
 
                             Button {
-                                Layout.preferredWidth: 150
-                                text: "Add row";
+                                Layout.preferredWidth: 195
+                                text: qsTr("Add Row");
                                 iconSource: "qrc:/images/add.svg"
                                 onClicked: {
                                     addRowDialog.open()
@@ -416,10 +429,10 @@ Repeater {
 
                                 Dialog {
                                     id: addRowDialog
-                                    title: "Add Row"
+                                    title: qsTr("Add Row")
 
-                                    width: 520
-                                    height: 300
+                                    width: 550
+                                    height: 400
                                     modality: Qt.ApplicationModal
 
                                     Loader {
@@ -449,7 +462,7 @@ Repeater {
 
                                         var model = viewModel.getValue(tabIndex)
                                         model.addRow(row)
-                                        table.model.reload()
+                                        keyTab.keyModel.reload()
                                         valueAddEditor.item.reset()
                                     }
 
@@ -459,19 +472,22 @@ Repeater {
                             }
 
                             Button {
-                                Layout.preferredWidth: 150
-                                text: "Delete row"
+                                Layout.preferredWidth: 195
+                                text: qsTr("Delete row")
                                 iconSource: "qrc:/images/delete.svg"
                                 enabled: table.currentRow != -1
 
                                 onClicked: {
-                                    if (table.model.totalRowCount() == 1) {
-                                        deleteRowConfirmation.text = "This is last row in this key, " +
-                                                "if you remove this - key will be removed!"
+                                    if (keyTab.keyModel.totalRowCount() == 1) {
+                                        deleteRowConfirmation.text = qsTr("The row is the last one in the key. After removing it key will be deleted.")
                                     } else {
-                                        deleteRowConfirmation.text = "Do you relly want to remove this row?"
+                                        deleteRowConfirmation.text = qsTr("Do you really want to remove this row?")
                                     }
-                                    deleteRowConfirmation.rowToDelete = table.currentRow
+
+                                    var rowIndex = table.model.getOriginalRowIndex(table.currentRow)
+                                    console.log("Original row index in model:", rowIndex)
+
+                                    deleteRowConfirmation.rowToDelete = rowIndex
                                     deleteRowConfirmation.open()
 
                                     Analytics.reportEvent("value-editor", "delete-row")
@@ -479,11 +495,11 @@ Repeater {
 
                                 MessageDialog {
                                     id: deleteRowConfirmation
-                                    title: "Delete row"
+                                    title: qsTr("Delete row")
                                     text: ""
                                     onYes: {
                                         console.log("remove row in key")
-                                        table.model.deleteRow(rowToDelete)
+                                        keyTab.keyModel.deleteRow(rowToDelete)
                                     }
                                     visible: false
                                     modality: Qt.ApplicationModal
@@ -495,8 +511,8 @@ Repeater {
                             }
 
                             Button {
-                                Layout.preferredWidth: 150
-                                text: "Reload Value"
+                                Layout.preferredWidth: 195
+                                text: qsTr("Reload Value")
                                 iconSource: "qrc:/images/refresh.svg"
                                 action: reLoadAction
 
@@ -505,11 +521,22 @@ Repeater {
                                     shortcut: StandardKey.Refresh
                                     onTriggered: {
                                         console.log("Reload value in tab")
-                                        table.model.reload()
+                                        keyTab.keyModel.reload()
                                         valueEditor.clear()
 
                                         Analytics.reportEvent("value-editor", "reload-key")
                                     }
+                                }
+                            }
+
+                            TextField {
+                                id: searchField
+
+                                Layout.preferredWidth: 195
+                                placeholderText: qsTr("Search on page...")
+
+                                Component.onCompleted: {
+                                    table.searchField = searchField
                                 }
                             }
 
@@ -534,14 +561,6 @@ Repeater {
                         Layout.fillHeight: !showValueNavigation
                         spacing: 0
 
-                        Connections {
-                            target: table
-
-                            onActivated: {
-                                valueEditor.loadRowValue(row)
-                            }
-                        }
-
                         Loader {
                             id: valueEditor
                             Layout.fillWidth: true                            
@@ -563,29 +582,33 @@ Repeater {
                                 }
                             }
 
+                            Component.onCompleted: {
+                                keyTab.valueEditor = valueEditor
+                            }
+
                             property int currentRow: -1
 
-                            source: {
-                                if (keyType === "string") {
-                                    table.loadValue()
-                                }
-
-                                return Editor.getEditorByTypeString(keyType)
-                            }
+                            source: Editor.getEditorByTypeString(keyType)
 
                             onLoaded: {
                                 if (valueEditor.item)
                                     valueEditor.item.resetAndDisableEditor()
-                                if (keyType === "string") {
-                                    valueEditor.loadRowValue(0)
-                                }
                             }
 
-                            function loadRowValue(row) {
+                            function loadRowValue(row) {                                
                                 if (valueEditor.item) {
-                                    var rowValue = table.model.getRow(row, true)
+                                    var rowValue = keyTab.keyModel.getRow(row, true)
+
+// TODO: Show dialog here with options:  View in read-only mode, Save to file, Ignore warning
+//                                    if (binaryUtils.binaryStringLength(rowValue['value']) > 150000) {
+//                                        console.log("Extra large value")
+//                                        return
+//                                    }
+
                                     valueEditor.currentRow = row
                                     valueEditor.item.setValue(rowValue)
+                                } else {
+                                    console.log("cannot load row value - item is missing")
                                 }
                             }
 
@@ -602,11 +625,11 @@ Repeater {
                             Layout.minimumHeight: 40
                             Item { Layout.fillWidth: true}
                             Button {
-                                text: "Save"
+                                text: qsTr("Save")
 
                                 onClicked: {
                                     if (!valueEditor.item || !valueEditor.item.isValueChanged()) {
-                                        savingConfirmation.text = "Nothing to save"
+                                        savingConfirmation.text = qsTr("Nothing to save")
                                         savingConfirmation.open()
                                         return
                                     }
@@ -614,19 +637,17 @@ Repeater {
                                     var value = valueEditor.item.getValue()
 
                                     console.log(value, value["value"])
-                                    table.model.updateRow(valueEditor.currentRow, value)
+                                    keyTab.keyModel.updateRow(valueEditor.currentRow, value)
 
-                                    savingConfirmation.text = "Value was updated!"
+                                    savingConfirmation.text = qsTr("Value was updated!")
                                     savingConfirmation.open()
-
-                                    Analytics.reportEvent("value-editor", "update-row")
                                 }
 
                             }
 
                             MessageDialog {
                                 id: savingConfirmation
-                                title: "Save value"
+                                title: qsTr("Save value")
                                 text: ""
                                 visible: false
                                 modality: Qt.ApplicationModal

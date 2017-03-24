@@ -8,17 +8,7 @@ import "./settings"
 
 Dialog {
     id: root
-    title: "Settings"
-
-    Settings {
-        id: globalSettings
-        category: "app"
-
-        property alias reopenNamespacesOnReload: nsReload.value
-        property alias enableKeySortingInTree: keySorting.value
-        property alias liveUpdateKeysLimit: liveKeyLimit.value
-        property alias liveUpdateInterval: liveUpdateInterval.value
-    }
+    title: qsTr("Settings")
 
     contentItem: Item {
         implicitWidth: 800
@@ -29,7 +19,53 @@ Dialog {
             anchors.margins: 20
 
             Text {
-                text: "Connections Tree Settings"
+                text: qsTr("General")
+                font.pixelSize: 20
+            }
+
+            ComboboxOption {
+                id: appLang
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+
+                model: ["system", "en_US", "zh_CN", "zh_TW"]
+                value: "system"
+                label: qsTr("Language")
+                description: qsTr("Application restart is needed to apply this setting.")
+            }
+
+            Text {
+                text: qsTr("Appearance")
+                font.pixelSize: 20
+            }
+
+            ComboboxOption {
+                id: appFont
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+
+                value: "Open Sans"
+                model: Qt.fontFamilies()
+                label: qsTr("Font")
+                description: ""
+            }
+
+            ComboboxOption {
+                id: appFontSize
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 40
+
+                model: ["8", "9", "10", "11", "12"]
+                value: "10"
+                label: qsTr("Font Size")
+                description: qsTr("in pixels")
+            }
+
+            Text {
+                text: qsTr("Connections Tree")
                 font.pixelSize: 20
             }
 
@@ -40,8 +76,8 @@ Dialog {
                 Layout.preferredHeight: 40
 
                 value: true
-                label: "Reopen namespaces on reload"
-                description: "(Disable to improve treeview performance)"
+                label: qsTr("Reopen namespaces on reload")
+                description: qsTr("(Disable to improve treeview performance)")
             }
 
             BoolOption {
@@ -51,8 +87,8 @@ Dialog {
                 Layout.preferredHeight: 40
 
                 value: true
-                label: "Enable key sorting in tree"
-                description: "(Disable to improve treeview performance)"
+                label: qsTr("Enable key sorting in tree")
+                description: qsTr("(Disable to improve treeview performance)")
             }
 
             IntOption {
@@ -64,7 +100,7 @@ Dialog {
                 min: 100
                 max: 100000
                 value: 1000
-                label: "Live update maximum allowed keys"
+                label: qsTr("Live update maximum allowed keys")
                 description: ""
             }
 
@@ -77,7 +113,7 @@ Dialog {
                 min: 3
                 max: 100000
                 value: 10
-                label: "Live update interval (in seconds)"
+                label: qsTr("Live update interval (in seconds)")
                 description: ""
             }
 
@@ -90,10 +126,23 @@ Dialog {
 
                 Item { Layout.fillWidth: true; }
                 Button {
-                    text: "OK"
+                    text: qsTr("OK")
                     onClicked: root.close()
                 }
             }
         }
+    }
+
+    Settings {
+        id: globalSettings
+        category: "app"
+
+        property alias reopenNamespacesOnReload: nsReload.value
+        property alias enableKeySortingInTree: keySorting.value
+        property alias liveUpdateKeysLimit: liveKeyLimit.value
+        property alias liveUpdateInterval: liveUpdateInterval.value
+        property alias appFont: appFont.value
+        property alias appFontSize: appFontSize.value
+        property alias locale: appLang.value
     }
 }
