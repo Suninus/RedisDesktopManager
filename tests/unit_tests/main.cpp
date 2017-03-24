@@ -16,8 +16,10 @@ INITIALIZE_EASYLOGGINGPP
 #include "testcases/app/test_dialogs.h"
 #include "testcases/connections-tree/test_serveritem.h"
 #include "testcases/connections-tree/test_databaseitem.h"
+#include "testcases/connections-tree/test_model.h"
 #include "testcases/console/test_console.h"
 #include "testcases/value-editor/test_valueview.h"
+#include "testcases/value-editor/test_viewmodel.h"
 #include "testcases/value-editor/test_compression.h"
 
 int main(int argc, char *argv[])
@@ -30,6 +32,7 @@ int main(int argc, char *argv[])
             // connections-tree module
             + QTest::qExec(new TestServerItem, argc, argv)
             + QTest::qExec(new TestDatabaseItem, argc, argv)
+            + QTest::qExec(new TestModel, argc, argv)
 
             // console module
             + QTest::qExec(new TestConsole, argc, argv)
@@ -46,6 +49,7 @@ int main(int argc, char *argv[])
             // value-editor module
             + QTest::qExec(new TestCompression, argc, argv)
             + QTest::qExec(new TestValueView, argc, argv)
+            + QTest::qExec(new TestViewModel, argc, argv)
             ;
 
     if (allTestsResult == 0)

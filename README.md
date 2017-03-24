@@ -18,7 +18,7 @@ Open source cross-platform Redis Desktop Manager based on Qt 5
 
 ![Redis Desktop Manager screenshoot](http://redisdesktop.com/static/img/features/all.png?v2)
 
-**Officially Supported platforms** : Windows 7+, Mac OS X 10.11+, Ubuntu 14+, Fedora 22+ (build with automated script)
+**Officially Supported platforms** : Windows 7+, Mac OS X 10.11+, Ubuntu 14+, Fedora | CentOS | OpenSUSE (build with automated script)
 
 **Community Supported platforms**: [ArchLinux](https://aur.archlinux.org/packages/redis-desktop-manager/)
 
@@ -28,9 +28,6 @@ Open source cross-platform Redis Desktop Manager based on Qt 5
 | Release | Original plan | Realized |
 | ------- | ------------- | -------- |
 | [0.8.7] (https://github.com/uglide/RedisDesktopManager/milestone/23?closed=1) | July 20, 2016 | [July 18, 2016](https://github.com/uglide/RedisDesktopManager/releases/tag/0.8.7) |
-| [0.8.8RC1] (https://github.com/uglide/RedisDesktopManager/milestone/24) | August 17, 2016 | |
-| [0.8.8] (https://github.com/uglide/RedisDesktopManager/milestone/24) | August 24, 2016 | |
-| [0.9.0RC1] (https://github.com/uglide/RedisDesktopManager/milestone/8) | Sept 14, 2016 | |
-| [0.9.0] (https://github.com/uglide/RedisDesktopManager/milestone/8) | Sept 21, 2016 | |
-| [0.9.1RC1] (https://github.com/uglide/RedisDesktopManager/milestone/22) | Oct 19, 2016 | |
-| [0.9.1] (https://github.com/uglide/RedisDesktopManager/milestone/22) | Oct 26, 2016 | |
+| [0.8.7-1] (https://github.com/uglide/RedisDesktopManager/milestone/23?closed=1) | - | [August 02, 2016](https://github.com/uglide/RedisDesktopManager/releases/tag/0.8.7-1) |
+| [0.8.8-beta] (https://github.com/uglide/RedisDesktopManager/milestone/24) | August 17, 2016 | [August 17, 2016](https://github.com/uglide/RedisDesktopManager/releases/tag/0.8.8-beta) |
+| [0.8.8] (https://github.com/uglide/RedisDesktopManager/milestone/24) | August 26, 2016 | [August 26, 2016](https://github.com/uglide/RedisDesktopManager/releases/tag/0.8.8) |

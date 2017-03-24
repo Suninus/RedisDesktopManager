@@ -62,6 +62,10 @@ QModelIndex ValueEditor::ViewModel::index(int row, int column, const QModelIndex
 {
     Q_UNUSED(column);
     Q_UNUSED(parent);
+
+    if (row < 0 || column < 0)
+        return QModelIndex();
+
     return createIndex(row, 0);
 }
 
@@ -85,7 +89,7 @@ QVariant ValueEditor::ViewModel::data(const QModelIndex &index, int role) const
         case keyNameRole: return model->getKeyName();
         case keyDisplayName: return model->getKeyTitle();
         case keyTTL: return model->getTTL();
-        case keyType: return model->getType();        
+        case keyType: return model->getType();                
         case showValueNavigation: return model->isMultiRow();
         case columnNames: return QVariant(model->getColumnNames()).toList();
         case count: return static_cast<qulonglong>(model->rowsCount());
@@ -104,22 +108,37 @@ QHash<int, QByteArray> ValueEditor::ViewModel::roleNames() const
     roles[keyType] = "keyType";    
     roles[showValueNavigation] = "showValueNavigation";
     roles[columnNames] = "columnNames";
-    roles[count] = "valuesCount";
-    roles[keyValue] = "keyValue";
+    roles[count] = "valuesCount";    
     return roles;
 }
 
 void ValueEditor::ViewModel::addKey(QString keyName, QString keyType,
                                     const QVariantMap &row, QJSValue jsCallback)
 {
+    if (m_newKeyRequest.first.isNull()) {
+        qDebug() << "Invalid new key request";
+        return;
+    }
+
+    auto connection = m_newKeyRequest.first.toStrongRef();
+
+    if (!connection) {
+        qDebug() << "Invalid new key request";
+        return;
+    }
+
     try {
-        m_keyFactory->addKey(m_newKeyRequest.first,
-                             keyName.toUtf8(), m_newKeyRequest.second,
-                             keyType, row);
+        m_keyFactory->addKey(connection, keyName.toUtf8(),
+                             m_newKeyRequest.second, keyType, row);
         m_newKeyCallback();
-        jsCallback.call(QJSValueList {});
-    } catch (const Model::Exception& e) {        
-        jsCallback.call(QJSValueList { "Can't add new key: " + QString(e.what()) });
+
+        if (jsCallback.isCallable())
+            jsCallback.call(QJSValueList {});
+
+        m_newKeyRequest = NewKeyRequest();
+    } catch (const Model::Exception& e) {
+        if (jsCallback.isCallable())
+            jsCallback.call(QJSValueList { "Can't add new key: " + QString(e.what()) });
     }
 }
 
@@ -186,7 +205,7 @@ void ValueEditor::ViewModel::setCurrentTab(int i)
     m_currentTabIndex = i;
 }
 
-QObject* ValueEditor::ViewModel::getValue(int i)
+QObject* ValueEditor::ViewModel::getValue(int i) const
 {
     if (!isIndexValid(index(i, 0)))
         return nullptr;
@@ -194,7 +213,6 @@ QObject* ValueEditor::ViewModel::getValue(int i)
     auto model = m_valueModels.at(i);
 
     QList<QObject *> valueEditors = model->getConnector()->findChildren<QObject *>();
-
 
     if (valueEditors.isEmpty())
         return new ValueEditor::ValueViewModel(model);
@@ -209,7 +227,7 @@ void ValueEditor::ViewModel::openNewKeyDialog(QSharedPointer<RedisClient::Connec
     if (connection.isNull() || dbIndex < 0)
         return;
 
-    m_newKeyRequest = qMakePair(connection, dbIndex);
+    m_newKeyRequest = qMakePair(connection.toWeakRef(), dbIndex);
     m_newKeyCallback = callback;
 
     QString dbId= QString("%1:db%2")
@@ -236,8 +254,8 @@ void ValueEditor::ViewModel::loadModel(QSharedPointer<ValueEditor::Model> model,
     } else {
         m_valueModels.insert(m_currentTabIndex, model);
         m_valueModels.removeAt(m_currentTabIndex+1);
-        emit replaceTab(m_currentTabIndex);
         emit dataChanged(index(m_currentTabIndex, 0), index(m_currentTabIndex, 0));
+        emit replaceTab(m_currentTabIndex);
     }
 }
 

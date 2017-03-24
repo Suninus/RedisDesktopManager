@@ -11,8 +11,8 @@ TEMPLATE = app
 
 # Skip version file
 !exists( $$PWD/version.h ) {    
-    DEFINES += RDM_VERSION=\\\"0.8.7-dev\\\"
-    message("Version: 0.8.7-dev")
+    DEFINES += RDM_VERSION=\\\"0.8.8-dev\\\"
+    message("Version: 0.8.8-dev")
 }
 
 DEFINES += CORE_LIBRARY ELPP_QT_LOGGING ELPP_STL_LOGGING ELPP_DISABLE_DEFAULT_CRASH_HANDLING
@@ -59,6 +59,10 @@ include($$THIRDPARTYDIR/3rdparty.pri)
 win32 {
     CONFIG += c++11
     RC_FILE += $$PWD/resources/rdm.rc
+
+    win32-msvc* {
+        QMAKE_LFLAGS += /LARGEADDRESSAWARE
+    }
 
     release: DESTDIR = ./../bin/windows/release
     debug:   DESTDIR = ./../bin/windows/debug

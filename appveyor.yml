@@ -1,5 +1,5 @@
 os: Visual Studio 2015
-version: 0.8.7.{build}
+version: 0.8.8.{build}
 clone_depth: 5
 install:
 - git submodule update --init --recursive
@@ -33,3 +33,6 @@ test_script:
 - echo 'Windows build is used only for installer compilation. Skip tests.'
 artifacts:
   - path: 'build/windows/installer/*.exe'
+  - path: build/windows/installer/resources/
+    name: rdm
+    type: zip
