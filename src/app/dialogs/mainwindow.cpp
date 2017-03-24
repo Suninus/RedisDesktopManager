@@ -114,7 +114,7 @@ void MainWin::initConnectionsTreeView()
     });
 
     if (connections->size() == 0) {
-        QTimer::singleShot(1000, this, SLOT(showQuickStartDialog()));
+        // QTimer::singleShot(1000, this, SLOT(showQuickStartDialog()));
     }
 
     ui.serversTreeView->setModel(connections.data());
